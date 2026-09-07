@@ -1,108 +1,107 @@
-﻿# Wicked Minecraft Pro Launcher ⛏️
+﻿# WickedApp
 
-Профессиональный, современный и высокопроизводительный лаунчер Minecraft на базе **Compose Multiplatform (Desktop / JVM)**, **MaterialKolor (Material You / M3)** и типографики **Google Sans**.
+WickedApp is a lightweight, modern launcher for Minecraft: Java Edition built with Kotlin and Compose Multiplatform by **3plz**. It is designed to provide a responsive, native desktop experience with a clean Material Design interface, fast startup times, and isolated game instance management.
 
 ---
 
-## 🚀 Быстрый запуск
+## Features
+
+- **Native Desktop Interface**: Built with Compose Multiplatform and hardware-accelerated Skia rendering for low resource usage and smooth framerates.
+- **Secure Microsoft Authentication**: Official OAuth 2.0 / Xbox Live authentication flow with local loopback verification. User credentials and passwords are never handled or stored by the application.
+- **Instance Isolation**: Separate directories for each installation, configuration, and save data to prevent mod or version conflicts.
+- **Content Management**: Built-in workflows for installing and organizing mods, resource packs, and shader packs.
+- **Custom JVM Configuration**: Fine-grained control over Java runtimes, garbage collection flags, and memory allocation per instance.
+- **Internationalization**: Multi-language support with runtime switching.
+
+---
+
+## Tech Stack
+
+- **Language**: Kotlin 2.1+
+- **UI Framework**: Compose Multiplatform Desktop (Skiko)
+- **Theming**: Material Design 3 / MaterialKolor
+- **Asynchronous Engine**: Kotlin Coroutines & Flow
+- **Serialization**: `kotlinx.serialization`
+- **Build Tool**: Gradle (Kotlin DSL) with Version Catalogs
+
+---
+
+## Prerequisites
+
+- **JDK**: Java 21 or higher
+- **OS**: Windows 10/11, macOS 12+, or modern Linux distributions
+
+---
+
+## Building from Source
+
+Clone the repository:
 
 ```bash
-# Запуск лаунчера
+git clone https://github.com/3plz/WickedApp.git
+cd WickedApp
+```
+
+Run in development mode:
+
+```bash
+# Windows
 .\gradlew.bat run
+
+# Linux / macOS
+./gradlew run
+```
+
+Package installer / distribution:
+
+```bash
+# Windows (creates .msi and .exe packages in build/compose/binaries/main)
+.\gradlew.bat packageDistributionForCurrentOS
+
+# Linux / macOS
+./gradlew packageDistributionForCurrentOS
 ```
 
 ---
 
-## 🌟 Основные возможности
+## Architecture Overview
 
-### 1. 🎮 Главная панель (Dashboard)
-- **Интерактивный Spotlight-баннер**: актуальное обновление Minecraft 1.21.4 (Бледный Сад & Скрипун) или выбранная сборка.
-- **Интегрированная нижняя панель запуска**:
-  - Быстрое переключение сборок и активных аккаунтов.
-  - Анимированная кнопка **«ИГРАТЬ»** со статус-баром запуска (проверка хэшей LWJGL, верификация модов, инициализация JVM).
-  - Монитор активного процесса в игре с таймером аптайма, потреблением RAM и кнопкой **«Остановить»**.
-- **Быстрые карточки**: недавние сборки в 1 клик, мониторинг популярных серверов, новости и патчноуты.
+The codebase is structured around clean modular boundaries:
 
-### 2. 📦 Менеджер сборок (Instances & Versions)
-- Управление версиями Minecraft (1.21.4, 1.21.1, 1.20.4, 1.20.1, 1.16.5 и др.).
-- Поддержка современных загрузчиков: **Fabric**, **Forge**, **NeoForge**, **Quilt**, **Vanilla**.
-- Фильтрация по типам загрузчиков и мгновенный поиск.
-- Диалог создания новой сборки с выбором иконки блока (Creaking, Grass, Creeper, Diamond Sword, Gear и др.) и выделением RAM.
-- Просмотр и переключение установленных модов (Enable/Disable switch).
-- Прямое открытие папки сборки в Проводнике Windows.
-
-### 3. 🧩 Каталог модов и шейдеров (Modrinth Hub)
-- Встроенный каталог популярных модификаций (Sodium, Iris Shaders, Create, JEI, Lithium, Distant Horizons, Complementary Shaders, AppleSkin, FerriteCore, JourneyMap, Sound Physics).
-- Категории: *Оптимизация, Шейдеры, Технологии, Интерфейс, Графика, Карты, Звук*.
-- Кнопка **«В сборку»** с автоматической установкой в текущую выбранную сборку.
-- Индикатор совместимости с загрузчиками и версиями.
-
-### 4. 👤 Менеджер аккаунтов и Скин-студия
-- Поддержка аккаунтов: **Microsoft (Лицензия)**, **Ely.by**, **Офлайн / Пиратка**.
-- **Интерактивный 3D/2D Canvas Visualizer скинов**:
-  - Отрисовка головы, прически, глаз, торса, рук, ног и плаща с пиксельной точностью.
-  - Слайдер угла обзора 3D (поворот персонажа).
-  - Переключение моделей: Классический Steve (4px) и Тонкий Alex (3px).
-  - Пресеты скинов: *Steve, Alex, Cyber Knight, Neon Shadow, Ender Mage, Redstone Engineer*.
-  - Включение/отключение плащей (Minecon 2011, Cherry Blossom, 15th Anniversary).
-
-### 5. 🌐 Мониторинг серверов
-- Список популярных игровых серверов (Hypixel Network, FunTime, GommeHD, Local SMP, 2B2T).
-- Онлайн-счетчики игроков с визуальным прогресс-баром.
-- Пинг-индикаторы с цветовой индикацией задержки.
-- Быстрое копирование IP в буфер обмена в 1 клик.
-- Добавление собственных серверов.
-
-### 6. 💻 Консоль и Логи в реальном времени
-- Терминал вывода логов процесса игры Minecraft.
-- Цветовая подсветка уровней: `INFO`, `WARN`, `ERROR`, `DEBUG`, `CHAT`.
-- Поиск по строкам логов и фильтрация по уровню важности.
-- Управление: автоматическая прокрутка, копирование в буфер обмена, очистка, аварийное завершение процесса («Убить процесс»).
-- Мониторинг PID и потребления ОЗУ.
-
-### 7. ⚙️ Гибкие настройки
-- **Java & Память**:
-  - Автоматическое обнаружение установленных версий JDK на Windows (Adoptium, Oracle, BellSoft, Microsoft).
-  - Слайдер выделения памяти с визуализацией доступной RAM в системе.
-  - Пресеты оптимизации сборщика мусора (GC): *G1GC (Оптимизировано), Shenandoah (Низкие задержки), ZGC (Генерационный)*.
-  - Кастомные аргументы запуска JVM.
-- **Экран и Разрешение**:
-  - Разрешение окна (FullHD 1920x1080, 1600x900, HD 1280x720, произвольное).
-  - Полноэкранный режим при старте.
-- **Внешний вид**:
-  - Тёмная и светлая темы Studio.
-  - Динамическая Material 3 палитра MaterialKolor + интерактивный пикер спектра HSV.
-  - Закрытие лаунчера при старте игры.
-  - Путь к рабочей папке `.minecraft`.
-
----
-
-## 🛠️ Архитектура проекта
-
-```
+```text
 src/main/kotlin/app/
-├── Main.kt                                # Главное окно приложения и навигация
-├── model/
-│   └── LauncherModels.kt                  # Модели Instance, Account, ModrinthMod, ServerInfo, GameLog, Settings
-├── state/
-│   └── LauncherState.kt                   # Реактивное состояние, жизненный цикл запуска и движок логов
-├── theme/
-│   ├── Theme.kt                           # MaterialKolor + Studio Slate темы
-│   └── InteractiveColorPalette.kt         # Интерактивный HSV пикер цветов
-├── components/
-│   ├── CustomTitleBar.kt                  # Кастомный заголовок окна с брендом и профилем
-│   ├── Sidebar.kt                         # Боковая навигационная панель со статусом игры
-│   ├── MinecraftIcons.kt                  # Брендовые бейджи загрузчиков и иконки блоков
-│   └── SkinPreview.kt                     # Canvas-рендер скинов и персонажа Minecraft
-└── ui/
-    ├── pages/
-    │   ├── HomePage.kt                    # Главная панель и кнопка запуска
-    │   ├── InstancesPage.kt               # Управление сборками
-    │   ├── ModsPage.kt                    # Каталог модов и шейдеров
-    │   ├── AccountsPage.kt                # Аккаунты и внешний вид
-    │   ├── ServersPage.kt                 # Мониторинг серверов
-    │   ├── ConsolePage.kt                 # Консоль и логи процесса
-    │   └── SettingsPage.kt                # Настройки Java, RAM, графики и темы
-    └── dialogs/
-        └── LauncherDialogs.kt             # Диалоги создания сборки, аккаунта и сервера
+├── domain/            # Core business models, session entities, and auth contracts
+│   ├── auth/          # Microsoft OAuth, Xbox Live, and Mojang service clients
+│   └── model/         # Domain state definitions (AuthState, UserSession)
+├── ui/                # Reactive Compose UI components
+│   ├── components/    # Reusable widgets, custom title bars, controls
+│   └── login/         # Authentication window and layout elements
+├── i18n/              # Localization tables and language providers
+├── theme/             # Material 3 palettes, typography, and styling
+└── di/                # Lightweight dependency injection container
 ```
+
+---
+
+## Security & Privacy
+
+WickedApp authenticates users directly through Microsoft's Identity Platform via OAuth 2.0. The application:
+- Never requests, collects, or stores Microsoft passwords.
+- Only retains standard OAuth refresh tokens locally on the user's machine within secure OS-level storage.
+- Communicates exclusively with official endpoints (`login.microsoftonline.com`, `user.auth.xboxlive.com`, and `api.minecraftservices.com`).
+
+---
+
+## Author
+
+Developed and maintained by **3plz** ([GitHub](https://github.com/3plz)).
+
+---
+
+## License
+
+Copyright (C) 2026 3plz.
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+See [LICENSE](LICENSE) for the full license text.

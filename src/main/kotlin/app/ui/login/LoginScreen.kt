@@ -25,7 +25,6 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     val isLoading = authState is AuthState.Authenticating
-    val userCode = (authState as? AuthState.Authenticating)?.userCode
 
     Box(
         modifier = modifier
@@ -38,21 +37,12 @@ fun LoginScreen(
         ) {
             MicrosoftLoginButton(
                 isLoading = isLoading,
-                userCode = userCode,
                 onClick = onLoginClick
             )
 
             when (authState) {
                 is AuthState.Authenticating -> {
-                    if (userCode != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = strings.codeCopiedHint,
-                            color = Color(0xFF94A3B8),
-                            fontFamily = GoogleSansFontFamily,
-                            fontSize = 12.sp
-                        )
-                    }
+                    // Loading spinner and status are displayed inside MicrosoftLoginButton
                 }
                 is AuthState.Authenticated -> {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -74,7 +64,7 @@ fun LoginScreen(
                     )
                 }
                 AuthState.Unauthenticated -> {
-                    /* Ничего лишнего не выводим */
+                    // Idle state - no additional elements
                 }
             }
         }

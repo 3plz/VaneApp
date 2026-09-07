@@ -30,7 +30,6 @@ import app.theme.StudioTheme
 @Composable
 fun MicrosoftLoginButton(
     isLoading: Boolean,
-    userCode: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -48,7 +47,7 @@ fun MicrosoftLoginButton(
 
     Surface(
         modifier = modifier
-            .width(if (userCode != null) 260.dp else 240.dp)
+            .width(240.dp)
             .height(44.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(
@@ -76,10 +75,10 @@ fun MicrosoftLoginButton(
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
-                    text = if (userCode != null) "Код: $userCode" else strings.waitingInBrowser,
+                    text = strings.waitingInBrowser,
                     fontFamily = GoogleSansFontFamily,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 13.5.sp,
+                    fontSize = 13.sp,
                     color = Color(0xFF60A5FA),
                     letterSpacing = 0.2.sp
                 )

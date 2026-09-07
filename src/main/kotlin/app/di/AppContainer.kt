@@ -4,11 +4,14 @@ import app.domain.auth.AuthService
 import app.domain.auth.MicrosoftAuthService
 
 /**
- * Главный DI-контейнер приложения.
- * Предоставляет абстрагированные синглтоны сервисов без тяжелых сторонних фреймворков.
+ * Primary dependency injection container for WickedApp.
+ * Provides abstracted singleton services with zero third-party reflection overhead.
  */
 class AppContainer {
-    // Абстрагированный сервис аутентификации (легко подменить на OfflineAuthService, YggdrasilAuthService и т.д.)
+    /**
+     * Authentication service instance.
+     * Abstracted under [AuthService] to allow swapping implementations (e.g., Offline/Yggdrasil).
+     */
     val authService: AuthService by lazy {
         MicrosoftAuthService()
     }

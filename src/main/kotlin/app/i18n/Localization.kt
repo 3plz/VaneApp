@@ -11,17 +11,17 @@ enum class AppLanguage(val code: String, val title: String) {
 
 data class AppStrings(
     val loginWithMicrosoft: String,
-    val windowTitle: String = "Minecraft Launcher",
+    val windowTitle: String = "WickedApp",
     val minimize: String = "Minimize",
     val close: String = "Close",
     val waitingInBrowser: String = "Waiting in browser...",
-    val codeCopiedHint: String = "Code copied to clipboard",
+    val codeCopiedHint: String = "Code copied to clipboard • Enter in browser",
     val loggedInAs: String = "Logged in as: "
 )
 
 val StringsEn = AppStrings(
     loginWithMicrosoft = "Login with Microsoft",
-    windowTitle = "Minecraft Launcher",
+    windowTitle = "WickedApp",
     minimize = "Minimize",
     close = "Close",
     waitingInBrowser = "Waiting in browser...",
@@ -31,7 +31,7 @@ val StringsEn = AppStrings(
 
 val StringsRu = AppStrings(
     loginWithMicrosoft = "Войти через Microsoft",
-    windowTitle = "Лаунчер Minecraft",
+    windowTitle = "WickedApp",
     minimize = "Свернуть",
     close = "Закрыть",
     waitingInBrowser = "Ожидание в браузере...",

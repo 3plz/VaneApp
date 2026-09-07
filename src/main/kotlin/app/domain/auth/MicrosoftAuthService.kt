@@ -10,11 +10,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
+/**
+ * Implements Microsoft OAuth 2.0, Xbox Live (XBL), Xbox Security Token Service (XSTS),
+ * and Minecraft Services authentication pipeline.
+ */
 class MicrosoftAuthService(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AuthService {
@@ -31,30 +36,46 @@ class MicrosoftAuthService(
     override suspend fun login(): Result<UserSession> = withContext(ioDispatcher) {
         try {
             println("\n" + "=".repeat(60))
-            println("▶ [1/4] Starting Microsoft Device Code Authentication...")
+            println("▶ [1/5] Starting WickedApp Microsoft OAuth2 Flow...")
             println("=".repeat(60))
-            _authState.value = AuthState.Authenticating("Connecting to Microsoft...")
+            _authState.value = AuthState.Authenticating("Awaiting browser authorization...")
 
-            // Шаг 1: Запрашиваем код устройства и ожидаем подтверждения в браузере
-            val tokenResult = MicrosoftDeviceCodeAuthHelper.startDeviceCodeFlow { userCode, verificationUri ->
-                println("\n" + "=".repeat(60))
-                println("🔑 ВАШ КОД ДЛЯ ВХОДА : [ $userCode ] (СКОПИРОВАН В БУФЕР!)")
-                println("🌐 СТРАНИЦА ВХОДА     : $verificationUri")
-                println("👉 В браузере код уже подставится автоматически!")
-                println("=".repeat(60) + "\n")
+            // Step 1: Acquire authorization code via local loopback HTTP listener
+            val codeResult = MicrosoftOAuthBrowserHelper.acquireAuthorizationCode()
+            val code = codeResult.getOrThrow()
+            println("[OK] [1/5] Authorization code received from browser!")
 
-                _authState.value = AuthState.Authenticating(
-                    progressMessage = "Waiting for browser confirmation...",
-                    userCode = userCode
-                )
+            _authState.value = AuthState.Authenticating("Exchanging token...")
+            println("\n▶ [2/5] Exchanging code for Microsoft OAuth Access Token...")
+
+            // Step 2: Exchange authorization code for Microsoft OAuth access token
+            val msTokenBody = listOf(
+                "client_id" to MicrosoftOAuthBrowserHelper.CLIENT_ID,
+                "code" to code,
+                "grant_type" to "authorization_code",
+                "redirect_uri" to MicrosoftOAuthBrowserHelper.REDIRECT_URI
+            ).joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+
+            val msTokenRequest = HttpRequest.newBuilder()
+                .uri(URI.create("https://login.microsoftonline.com/consumers/oauth2/v2.0/token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(msTokenBody))
+                .build()
+
+            val msTokenResponse = httpClient.send(msTokenRequest, HttpResponse.BodyHandlers.ofString())
+            if (msTokenResponse.statusCode() !in 200..299) {
+                error("Microsoft Token Error (${msTokenResponse.statusCode()}): ${msTokenResponse.body()}")
             }
 
-            val msAccessToken = tokenResult.getOrThrow()
-            println("[OK] [1/4] Microsoft Access Token successfully acquired!")
+            val msJson = json.parseToJsonElement(msTokenResponse.body()).jsonObject
+            val msAccessToken = msJson["access_token"]?.jsonPrimitive?.content
+                ?: error("No access_token in Microsoft response")
 
-            // Шаг 2: Аутентификация в Xbox Live (XBL)
-            _authState.value = AuthState.Authenticating("Xbox Live Auth...")
-            println("\n▶ [2/4] Authenticating with Xbox Live (user.auth.xboxlive.com)...")
+            println("[OK] [2/5] Microsoft Access Token acquired!")
+
+            // Step 3: Authenticate with Xbox Live (XBL)
+            _authState.value = AuthState.Authenticating("Xbox Live...")
+            println("\n▶ [3/5] Authenticating with Xbox Live (user.auth.xboxlive.com)...")
 
             val xblRequestBody = buildJsonObject {
                 putJsonObject("Properties") {
@@ -86,11 +107,11 @@ class MicrosoftAuthService(
                 ?.get("uhs")?.jsonPrimitive?.content
                 ?: error("No userHash (uhs) in Xbox Live response")
 
-            println("[OK] [2/4] Xbox Live Token & UserHash ($userHash) acquired!")
+            println("[OK] [3/5] Xbox Live Token & UserHash ($userHash) acquired!")
 
-            // Шаг 3: Получение токена безопасности XSTS (Xbox Security Token Service)
+            // Step 4: Acquire Xbox Security Token Service (XSTS) token
             _authState.value = AuthState.Authenticating("XSTS Authorization...")
-            println("\n▶ [3/4] Requesting XSTS Token (xsts.auth.xboxlive.com)...")
+            println("\n▶ [4/5] Requesting XSTS Token (xsts.auth.xboxlive.com)...")
 
             val xstsRequestBody = buildJsonObject {
                 putJsonObject("Properties") {
@@ -117,7 +138,7 @@ class MicrosoftAuthService(
                 if (errorBody.contains("2148916238")) {
                     error("Child account: requires Xbox family consent.")
                 } else if (errorBody.contains("2148916233")) {
-                    error("Account does not have an Xbox Live profile.")
+                    error("Account does not have an active Xbox Live profile.")
                 }
                 error("XSTS Error (${xstsResponse.statusCode()}): $errorBody")
             }
@@ -126,11 +147,11 @@ class MicrosoftAuthService(
             val xstsToken = xstsJson["Token"]?.jsonPrimitive?.content
                 ?: error("No Token in XSTS response")
 
-            println("[OK] [3/4] XSTS Token acquired!")
+            println("[OK] [4/5] XSTS Token acquired!")
 
-            // Шаг 4: Вход в Minecraft Services (Mojang) и получение профиля
-            _authState.value = AuthState.Authenticating("Mojang Minecraft Services...")
-            println("\n▶ [4/4] Logging into Minecraft Services (api.minecraftservices.com)...")
+            // Step 5: Authenticate with Mojang Minecraft Services and obtain profile
+            _authState.value = AuthState.Authenticating("Minecraft Services...")
+            println("\n▶ [5/5] Logging into Minecraft Services (api.minecraftservices.com)...")
 
             val mcLoginBody = buildJsonObject {
                 put("identityToken", "XBL3.0 x=$userHash;$xstsToken")
@@ -144,16 +165,23 @@ class MicrosoftAuthService(
 
             val mcLoginResponse = httpClient.send(mcLoginRequest, HttpResponse.BodyHandlers.ofString())
             if (mcLoginResponse.statusCode() !in 200..299) {
-                error("Minecraft Services Login Error (${mcLoginResponse.statusCode()}): ${mcLoginResponse.body()}")
+                val errBody = mcLoginResponse.body()
+                if (errBody.contains("Invalid app registration")) {
+                    println("\n" + "!".repeat(60))
+                    println("[NOTICE] WickedApp application approval is pending review by Mojang.")
+                    println("Form URL: https://aka.ms/AppRegInfo")
+                    println("!".repeat(60) + "\n")
+                }
+                error("Minecraft Services Error (${mcLoginResponse.statusCode()}): $errBody")
             }
 
             val mcLoginJson = json.parseToJsonElement(mcLoginResponse.body()).jsonObject
             val mcAccessToken = mcLoginJson["access_token"]?.jsonPrimitive?.content
                 ?: error("No access_token in Minecraft login response")
 
-            println("[OK] [4/4] Minecraft Services Bearer Token acquired!")
+            println("[OK] [5/5] Minecraft Services Bearer Token acquired!")
 
-            // Получаем игровой профиль Minecraft (ник, UUID, скин)
+            // Retrieve player's Minecraft profile (UUID, username, and active skin)
             val profileRequest = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.minecraftservices.com/minecraft/profile"))
                 .header("Authorization", "Bearer $mcAccessToken")
@@ -183,9 +211,7 @@ class MicrosoftAuthService(
                 )
             }
 
-            // ====================================================================
-            // ДЕБАГ ВЫВОД В КОНСОЛЬ
-            // ====================================================================
+            // Output debug session info to console
             println("\n" + "=".repeat(60))
             println(">>> [SUCCESS] MINECRAFT AUTHENTICATION COMPLETED! <<<")
             println("=".repeat(60))

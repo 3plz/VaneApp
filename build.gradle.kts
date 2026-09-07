@@ -1,12 +1,19 @@
-﻿plugins {
+﻿import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
+plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
 }
 
-kotlin {
-    jvmToolchain(21)
+group = "app.wicked"
+version = "1.0.0"
+
+repositories {
+    mavenCentral()
+    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    google()
 }
 
 dependencies {
@@ -14,11 +21,9 @@ dependencies {
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
     implementation(compose.components.resources)
-    implementation(libs.material.kolor)
-
-    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.material.kolor)
 }
 
 compose.desktop {
@@ -27,13 +32,13 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
+                TargetFormat.Msi,
+                TargetFormat.Exe
             )
-            packageName = "WickedMinecraftLauncher"
-            packageVersion = "2.0.0"
-            description = "Wicked Minecraft Pro Launcher"
-            vendor = "Wicked Studio"
+            packageName = "WickedApp"
+            packageVersion = "1.0.0"
+            description = "WickedApp"
+            vendor = "3plz"
         }
     }
 }

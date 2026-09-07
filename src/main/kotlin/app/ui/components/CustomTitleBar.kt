@@ -12,18 +12,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Minimize
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.FrameWindowScope
+import androidx.compose.ui.window.WindowScope
 import androidx.compose.ui.window.WindowState
 import app.theme.StudioTheme
 
 @Composable
-fun FrameWindowScope.CustomTitleBar(
+fun WindowScope.CustomTitleBar(
     windowState: WindowState,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -35,14 +37,14 @@ fun FrameWindowScope.CustomTitleBar(
             .background(StudioTheme.BackgroundDark),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Перетаскивание окна за шапку
+        // Draggable window header area
         WindowDraggableArea(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
         )
 
-        // Кнопки управления окном (Свернуть и Закрыть)
+        // Window control buttons (Minimize and Close)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxHeight()
@@ -63,35 +65,33 @@ fun FrameWindowScope.CustomTitleBar(
 @Composable
 private fun TitleBarBtn(
     icon: ImageVector,
+    onClick: () -> Unit,
     isClose: Boolean = false,
-    onClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
 
-    val bg by animateColorAsState(
-        targetValue = when {
-            isHovered && isClose -> Color(0xFFE81123)
-            isHovered -> StudioTheme.HoverDark
-            else -> Color.Transparent
-        },
-        animationSpec = tween(120)
-    )
+    val targetBg = when {
+        isHovered && isClose -> Color(0xFFE81123)
+        isHovered -> StudioTheme.HoverDark
+        else -> Color.Transparent
+    }
 
-    val tint by animateColorAsState(
-        targetValue = when {
-            isHovered && isClose -> Color.White
-            isHovered -> StudioTheme.TextPrimary
-            else -> StudioTheme.TextSecondary
-        },
-        animationSpec = tween(120)
-    )
+    val targetTint = when {
+        isHovered && isClose -> Color.White
+        isHovered -> StudioTheme.TextPrimary
+        else -> StudioTheme.TextSecondary
+    }
+
+    val bgColor by animateColorAsState(targetBg, animationSpec = tween(100))
+    val iconTint by animateColorAsState(targetTint, animationSpec = tween(100))
 
     Box(
-        modifier = Modifier
-            .width(38.dp)
+        modifier = modifier
+            .width(46.dp)
             .fillMaxHeight()
-            .background(bg)
+            .background(bgColor)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -102,8 +102,8 @@ private fun TitleBarBtn(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(13.dp)
+            tint = iconTint,
+            modifier = Modifier.size(if (icon == Icons.Default.Minimize) 14.dp else 16.dp)
         )
     }
 }

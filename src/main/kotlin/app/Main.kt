@@ -17,7 +17,7 @@ fun main() = application {
     val authState by authService.authState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
-    // Текущий язык интерфейса (по умолчанию английский)
+    // Active UI locale (English by default)
     var currentLanguage by remember { mutableStateOf(AppLanguage.EN) }
 
     CompositionLocalProvider(
