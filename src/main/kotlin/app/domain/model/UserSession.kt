@@ -5,5 +5,6 @@ data class UserSession(
     val username: String,
     val accessToken: String,
     val skinUrl: String? = null,
-    val loggedInAt: Long = System.currentTimeMillis()
+    val loggedInAt: Long = System.currentTimeMillis(),
+    val isOffline: Boolean = false
 )

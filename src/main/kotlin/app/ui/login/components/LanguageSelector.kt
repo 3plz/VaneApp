@@ -42,15 +42,15 @@ fun LanguageSelector(
     val isLangHovered by langInteraction.collectIsHoveredAsState()
 
     val langBg by animateColorAsState(
-        targetValue = if (isLangHovered || isMenuExpanded) Color(0xFF262B38) else Color(0xFF1E222E),
+        targetValue = if (isLangHovered || isMenuExpanded) StudioTheme.HoverDark else StudioTheme.SurfaceCardDark,
         animationSpec = tween(150)
     )
     val langBorder by animateColorAsState(
-        targetValue = if (isLangHovered || isMenuExpanded) Color(0xFF434A5E) else Color(0xFF2E3342),
+        targetValue = if (isLangHovered || isMenuExpanded) StudioTheme.PrimaryIndigoLight else StudioTheme.BorderDark,
         animationSpec = tween(150)
     )
     val langTint by animateColorAsState(
-        targetValue = if (isLangHovered || isMenuExpanded) Color.White else Color(0xFF9AA0A6),
+        targetValue = if (isLangHovered || isMenuExpanded) StudioTheme.TextPrimary else StudioTheme.TextSecondary,
         animationSpec = tween(150)
     )
 
@@ -63,7 +63,7 @@ fun LanguageSelector(
                 .border(1.dp, langBorder, RoundedCornerShape(10.dp))
                 .clickable(
                     interactionSource = langInteraction,
-                    indication = ripple(color = Color.White.copy(alpha = 0.2f)),
+                    indication = ripple(color = StudioTheme.PrimaryIndigo.copy(alpha = 0.2f)),
                     onClick = { isMenuExpanded = !isMenuExpanded }
                 ),
             contentAlignment = Alignment.Center
@@ -82,8 +82,8 @@ fun LanguageSelector(
             offset = DpOffset(x = 0.dp, y = (-8).dp),
             modifier = Modifier
                 .width(165.dp)
-                .background(Color(0xFF1B1E28))
-                .border(1.dp, Color(0xFF2E3342), RoundedCornerShape(10.dp))
+                .background(StudioTheme.SurfaceCardDark)
+                .border(1.dp, StudioTheme.BorderDark, RoundedCornerShape(10.dp))
                 .padding(4.dp),
             shape = RoundedCornerShape(10.dp)
         ) {
@@ -94,8 +94,8 @@ fun LanguageSelector(
 
                 val itemBg by animateColorAsState(
                     targetValue = when {
-                        isSelected -> Color(0xFF262B3A)
-                        isItemHovered -> Color(0xFF222634)
+                        isSelected -> StudioTheme.SurfaceContainerDark
+                        isItemHovered -> StudioTheme.HoverDark
                         else -> Color.Transparent
                     },
                     animationSpec = tween(120)
@@ -109,7 +109,7 @@ fun LanguageSelector(
                         .background(itemBg)
                         .clickable(
                             interactionSource = itemInteraction,
-                            indication = ripple(color = Color.White.copy(alpha = 0.15f)),
+                            indication = ripple(color = StudioTheme.PrimaryIndigo.copy(alpha = 0.15f)),
                             onClick = {
                                 onLanguageSelected(lang)
                                 isMenuExpanded = false
@@ -123,10 +123,10 @@ fun LanguageSelector(
                         fontFamily = GoogleSansFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.5.sp,
-                        color = if (isSelected) Color(0xFF60A5FA) else Color(0xFF9AA0A6),
+                        color = if (isSelected) StudioTheme.PrimaryIndigo else StudioTheme.TextMuted,
                         modifier = Modifier
                             .background(
-                                color = if (isSelected) Color(0xFF60A5FA).copy(alpha = 0.15f) else Color(0xFF282D3C),
+                                color = if (isSelected) StudioTheme.PrimaryIndigo.copy(alpha = 0.18f) else StudioTheme.SurfaceContainerDark,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 5.dp, vertical = 2.dp)
@@ -139,7 +139,7 @@ fun LanguageSelector(
                         fontFamily = GoogleSansFontFamily,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         fontSize = 12.5.sp,
-                        color = if (isSelected) Color.White else StudioTheme.TextPrimary
+                        color = if (isSelected) StudioTheme.TextPrimary else StudioTheme.TextSecondary
                     )
 
                     if (isSelected) {
@@ -147,7 +147,7 @@ fun LanguageSelector(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color(0xFF60A5FA),
+                            tint = StudioTheme.PrimaryIndigo,
                             modifier = Modifier.size(15.dp)
                         )
                     }

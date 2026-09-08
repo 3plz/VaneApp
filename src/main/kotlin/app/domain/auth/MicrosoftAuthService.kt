@@ -1,7 +1,10 @@
 package app.domain.auth
 
+import app.domain.model.Account
+import app.domain.model.AccountType
 import app.domain.model.AuthState
 import app.domain.model.UserSession
+import app.domain.storage.AccountRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,22 +13,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.net.URI
-import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 import java.time.Duration
+import java.util.UUID
 
 /**
- * Implements Microsoft OAuth 2.0, Xbox Live (XBL), Xbox Security Token Service (XSTS),
- * and Minecraft Services authentication pipeline.
+ * Implements Microsoft OAuth 2.0 (Device Code Grant), Xbox Live (XBL), Xbox Security Token Service (XSTS),
+ * and Minecraft Services authentication pipeline, alongside offline player login.
  */
 class MicrosoftAuthService(
+    private val accountRepository: AccountRepository = AccountRepository(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AuthService {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     override val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    override val hasMicrosoftAccount: StateFlow<Boolean> = accountRepository.hasMicrosoftAccount
 
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(15))
@@ -36,46 +43,23 @@ class MicrosoftAuthService(
     override suspend fun login(): Result<UserSession> = withContext(ioDispatcher) {
         try {
             println("\n" + "=".repeat(60))
-            println("▶ [1/5] Starting WickedApp Microsoft OAuth2 Flow...")
+            println("▶ [1/4] Starting Microsoft Device Code Flow...")
             println("=".repeat(60))
-            _authState.value = AuthState.Authenticating("Awaiting browser authorization...")
+            _authState.value = AuthState.Authenticating("Connecting to Microsoft...")
 
-            // Step 1: Acquire authorization code via local loopback HTTP listener
-            val codeResult = MicrosoftOAuthBrowserHelper.acquireAuthorizationCode()
-            val code = codeResult.getOrThrow()
-            println("[OK] [1/5] Authorization code received from browser!")
-
-            _authState.value = AuthState.Authenticating("Exchanging token...")
-            println("\n▶ [2/5] Exchanging code for Microsoft OAuth Access Token...")
-
-            // Step 2: Exchange authorization code for Microsoft OAuth access token
-            val msTokenBody = listOf(
-                "client_id" to MicrosoftOAuthBrowserHelper.CLIENT_ID,
-                "code" to code,
-                "grant_type" to "authorization_code",
-                "redirect_uri" to MicrosoftOAuthBrowserHelper.REDIRECT_URI
-            ).joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
-
-            val msTokenRequest = HttpRequest.newBuilder()
-                .uri(URI.create("https://login.microsoftonline.com/consumers/oauth2/v2.0/token"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(msTokenBody))
-                .build()
-
-            val msTokenResponse = httpClient.send(msTokenRequest, HttpResponse.BodyHandlers.ofString())
-            if (msTokenResponse.statusCode() !in 200..299) {
-                error("Microsoft Token Error (${msTokenResponse.statusCode()}): ${msTokenResponse.body()}")
+            // Step 1: Start device code flow with Mojang allowlisted client ID
+            val msTokenResult = MicrosoftDeviceCodeAuthHelper.startDeviceCodeFlow { userCode, _ ->
+                _authState.value = AuthState.Authenticating(
+                    progressMessage = "Waiting in browser...",
+                    userCode = userCode
+                )
             }
+            val msAccessToken = msTokenResult.getOrThrow()
+            println("[OK] [1/4] Microsoft Access Token acquired!")
 
-            val msJson = json.parseToJsonElement(msTokenResponse.body()).jsonObject
-            val msAccessToken = msJson["access_token"]?.jsonPrimitive?.content
-                ?: error("No access_token in Microsoft response")
-
-            println("[OK] [2/5] Microsoft Access Token acquired!")
-
-            // Step 3: Authenticate with Xbox Live (XBL)
+            // Step 2: Authenticate with Xbox Live (XBL)
             _authState.value = AuthState.Authenticating("Xbox Live...")
-            println("\n▶ [3/5] Authenticating with Xbox Live (user.auth.xboxlive.com)...")
+            println("\n▶ [2/4] Authenticating with Xbox Live (user.auth.xboxlive.com)...")
 
             val xblRequestBody = buildJsonObject {
                 putJsonObject("Properties") {
@@ -107,11 +91,11 @@ class MicrosoftAuthService(
                 ?.get("uhs")?.jsonPrimitive?.content
                 ?: error("No userHash (uhs) in Xbox Live response")
 
-            println("[OK] [3/5] Xbox Live Token & UserHash ($userHash) acquired!")
+            println("[OK] [2/4] Xbox Live Token & UserHash ($userHash) acquired!")
 
-            // Step 4: Acquire Xbox Security Token Service (XSTS) token
+            // Step 3: Acquire Xbox Security Token Service (XSTS) token
             _authState.value = AuthState.Authenticating("XSTS Authorization...")
-            println("\n▶ [4/5] Requesting XSTS Token (xsts.auth.xboxlive.com)...")
+            println("\n▶ [3/4] Requesting XSTS Token (xsts.auth.xboxlive.com)...")
 
             val xstsRequestBody = buildJsonObject {
                 putJsonObject("Properties") {
@@ -147,11 +131,11 @@ class MicrosoftAuthService(
             val xstsToken = xstsJson["Token"]?.jsonPrimitive?.content
                 ?: error("No Token in XSTS response")
 
-            println("[OK] [4/5] XSTS Token acquired!")
+            println("[OK] [3/4] XSTS Token acquired!")
 
-            // Step 5: Authenticate with Mojang Minecraft Services and obtain profile
+            // Step 4: Authenticate with Mojang Minecraft Services and obtain profile
             _authState.value = AuthState.Authenticating("Minecraft Services...")
-            println("\n▶ [5/5] Logging into Minecraft Services (api.minecraftservices.com)...")
+            println("\n▶ [4/4] Logging into Minecraft Services (api.minecraftservices.com)...")
 
             val mcLoginBody = buildJsonObject {
                 put("identityToken", "XBL3.0 x=$userHash;$xstsToken")
@@ -165,21 +149,14 @@ class MicrosoftAuthService(
 
             val mcLoginResponse = httpClient.send(mcLoginRequest, HttpResponse.BodyHandlers.ofString())
             if (mcLoginResponse.statusCode() !in 200..299) {
-                val errBody = mcLoginResponse.body()
-                if (errBody.contains("Invalid app registration")) {
-                    println("\n" + "!".repeat(60))
-                    println("[NOTICE] WickedApp application approval is pending review by Mojang.")
-                    println("Form URL: https://aka.ms/AppRegInfo")
-                    println("!".repeat(60) + "\n")
-                }
-                error("Minecraft Services Error (${mcLoginResponse.statusCode()}): $errBody")
+                error("Minecraft Services Error (${mcLoginResponse.statusCode()}): ${mcLoginResponse.body()}")
             }
 
             val mcLoginJson = json.parseToJsonElement(mcLoginResponse.body()).jsonObject
             val mcAccessToken = mcLoginJson["access_token"]?.jsonPrimitive?.content
                 ?: error("No access_token in Minecraft login response")
 
-            println("[OK] [5/5] Minecraft Services Bearer Token acquired!")
+            println("[OK] [4/4] Minecraft Services Bearer Token acquired!")
 
             // Retrieve player's Minecraft profile (UUID, username, and active skin)
             val profileRequest = HttpRequest.newBuilder()
@@ -211,6 +188,19 @@ class MicrosoftAuthService(
                 )
             }
 
+            // Persist Microsoft account locally
+            val account = Account(
+                id = session.userId,
+                username = session.username,
+                type = AccountType.MICROSOFT,
+                accessToken = session.accessToken,
+                refreshToken = null,
+                skinUrl = session.skinUrl,
+                createdAt = System.currentTimeMillis(),
+                lastUsedAt = System.currentTimeMillis()
+            )
+            accountRepository.saveAccount(account, makeActive = true)
+
             // Output debug session info to console
             println("\n" + "=".repeat(60))
             println(">>> [SUCCESS] MINECRAFT AUTHENTICATION COMPLETED! <<<")
@@ -232,11 +222,74 @@ class MicrosoftAuthService(
         }
     }
 
+    override suspend fun loginOffline(username: String): Result<UserSession> = withContext(ioDispatcher) {
+        try {
+            if (!accountRepository.hasMicrosoftAccount()) {
+                error("At least one registered Microsoft account is required before creating an offline profile.")
+            }
+
+            val trimmed = username.trim()
+            if (trimmed.length !in 3..16 || !trimmed.matches(Regex("^[a-zA-Z0-9_]{3,16}$"))) {
+                error("Invalid Minecraft username: '$trimmed'. Must be 3-16 characters [a-zA-Z0-9_]")
+            }
+
+            // Generate official standard offline player UUID: UUID.nameUUIDFromBytes("OfflinePlayer:$username")
+            val offlineUuid = UUID.nameUUIDFromBytes("OfflinePlayer:$trimmed".toByteArray(StandardCharsets.UTF_8)).toString()
+            val session = UserSession(
+                userId = offlineUuid,
+                username = trimmed,
+                accessToken = "offline_token_$offlineUuid",
+                skinUrl = null
+            )
+
+            // Persist offline account locally
+            val account = Account(
+                id = session.userId,
+                username = session.username,
+                type = AccountType.OFFLINE,
+                accessToken = session.accessToken,
+                refreshToken = null,
+                skinUrl = null,
+                createdAt = System.currentTimeMillis(),
+                lastUsedAt = System.currentTimeMillis()
+            )
+            accountRepository.saveAccount(account, makeActive = true)
+
+            println("\n" + "=".repeat(60))
+            println(">>> [SUCCESS] OFFLINE MINECRAFT LOGIN COMPLETED! <<<")
+            println("=".repeat(60))
+            println("Player Name (Username) : ${session.username}")
+            println("Player UUID (Offline)  : ${session.userId}")
+            println("Account Type           : Offline")
+            println("Session Timestamp      : ${java.time.LocalDateTime.now()}")
+            println("=".repeat(60) + "\n")
+
+            _authState.value = AuthState.Authenticated(session)
+            Result.success(session)
+        } catch (e: Exception) {
+            val errorMsg = e.localizedMessage ?: "Offline login failed"
+            println("\n[ERROR] Offline login failed: $errorMsg")
+            _authState.value = AuthState.Error(errorMsg)
+            Result.failure(e)
+        }
+    }
+
     override suspend fun logout() = withContext(ioDispatcher) {
         _authState.value = AuthState.Unauthenticated
     }
 
     override suspend fun restoreSession(): Boolean = withContext(ioDispatcher) {
-        false
+        try {
+            val activeAccount = accountRepository.getActiveAccount() ?: return@withContext false
+            println("\n[WickedApp] Restoring saved session for account: ${activeAccount.username} (${activeAccount.type})...")
+            val session = activeAccount.toUserSession()
+            _authState.value = AuthState.Authenticated(session)
+            println("[WickedApp] Session restored successfully for ${session.username}!\n")
+            true
+        } catch (e: Exception) {
+            println("[WARN] Failed to restore session: ${e.message}")
+            _authState.value = AuthState.Unauthenticated
+            false
+        }
     }
 }

@@ -13,7 +13,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +32,7 @@ import app.theme.StudioTheme
 @Composable
 fun MicrosoftLoginButton(
     isLoading: Boolean,
+    userCode: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -37,11 +40,11 @@ fun MicrosoftLoginButton(
     val isBtnHovered by btnInteraction.collectIsHoveredAsState()
 
     val btnBg by animateColorAsState(
-        targetValue = if (isBtnHovered) Color(0xFF262B38) else Color(0xFF1E222E),
+        targetValue = if (isBtnHovered) StudioTheme.HoverDark else StudioTheme.SurfaceCardDark,
         animationSpec = tween(150)
     )
     val btnBorder by animateColorAsState(
-        targetValue = if (isBtnHovered) Color(0xFF434A5E) else Color(0xFF2E3342),
+        targetValue = if (isBtnHovered) StudioTheme.PrimaryIndigoLight else StudioTheme.BorderDark,
         animationSpec = tween(150)
     )
 
@@ -52,7 +55,7 @@ fun MicrosoftLoginButton(
             .clip(RoundedCornerShape(12.dp))
             .clickable(
                 interactionSource = btnInteraction,
-                indication = ripple(color = Color.White.copy(alpha = 0.2f)),
+                indication = ripple(color = StudioTheme.PrimaryIndigo.copy(alpha = 0.2f)),
                 enabled = !isLoading,
                 onClick = onClick
             ),
@@ -68,18 +71,18 @@ fun MicrosoftLoginButton(
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
-                    color = Color(0xFF60A5FA),
+                    color = StudioTheme.PrimaryIndigo,
                     strokeWidth = 2.dp
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
-                    text = strings.waitingInBrowser,
+                    text = if (userCode != null) "Code: $userCode" else strings.waitingInBrowser,
                     fontFamily = GoogleSansFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 13.sp,
-                    color = Color(0xFF60A5FA),
+                    color = StudioTheme.PrimaryIndigo,
                     letterSpacing = 0.2.sp
                 )
             }
@@ -102,7 +105,7 @@ fun MicrosoftLoginButton(
                     text = strings.loginWithMicrosoft,
                     fontFamily = GoogleSansFontFamily,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 13.5.sp,
+                    fontSize = 13.sp,
                     color = StudioTheme.TextPrimary,
                     letterSpacing = 0.2.sp
                 )

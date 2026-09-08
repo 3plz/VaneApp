@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "timestamp": 1788861774775,
+  "modsCount": 1,
+  "status": "STARTED",
+  "mods": [
+    {
+      "jarName": "fabric-loader-0.19.3.jar (modloader)",
+      "modId": "fabric",
+      "name": "fabric",
+      "version": "fabric-loader-0.19.3.jar",
+      "mixinConfigs": [],
+      "jarJarMods": []
+    }
+  ]
+}

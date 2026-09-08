@@ -255,18 +255,18 @@ val DarkStudioColors = StudioColors(
 
 val LightStudioColors = StudioColors(
     isDark = false,
-    background = Color(0xFFF8FAFC),       // Clean light paper-like slate canvas
-    surface = Color(0xFFFFFFFF),          // Crisp white for titlebar and sidebars
-    surfaceContainer = Color(0xFFF1F5F9), // Light slate container
-    surfaceCard = Color(0xFFF1F5F9),      // Light cards and input surfaces
-    border = Color(0xFFCBD5E1),           // Slate 300 crisp border
-    borderSubtle = Color(0xFFE2E8F0),     // Slate 200 subtle divider
-    hover = Color(0xFFE2E8F0),            // Hover state
-    textPrimary = Color(0xFF0F172A),      // Slate 900 dark, crisp text
-    textSecondary = Color(0xFF475569),    // Slate 600 medium dark text
-    textMuted = Color(0xFF64748B),        // Slate 500 readable muted text
-    primaryIndigo = Color(0xFF4F46E5),    // Rich indigo
-    primaryIndigoLight = Color(0xFF6366F1),// Vibrant indigo
+    background = Color(0xFFF8FAFC),
+    surface = Color(0xFFFFFFFF),
+    surfaceContainer = Color(0xFFF1F5F9),
+    surfaceCard = Color(0xFFF1F5F9),
+    border = Color(0xFFCBD5E1),
+    borderSubtle = Color(0xFFE2E8F0),
+    hover = Color(0xFFE2E8F0),
+    textPrimary = Color(0xFF0F172A),
+    textSecondary = Color(0xFF475569),
+    textMuted = Color(0xFF64748B),
+    primaryIndigo = Color(0xFF4F46E5),
+    primaryIndigoLight = Color(0xFF6366F1),
     accent = AppAccentColor.INDIGO
 )
 
@@ -323,43 +323,19 @@ val IdeSeedColor = Color(0xFF6366F1)
 @Composable
 fun WickedTheme(
     darkTheme: Boolean = true,
+    themePreset: ThemePreset? = null,
     accentColor: AppAccentColor = AppAccentColor.INDIGO,
     customAccentHex: String? = null,
     content: @Composable () -> Unit
 ) {
-    val customColor = remember(customAccentHex) { customAccentHex?.let { hexToColorOrNull(it) } }
-
-    val effectiveSeed = if (accentColor == AppAccentColor.CUSTOM && customColor != null) {
-        customColor
-    } else {
-        accentColor.seedColor
-    }
-
-    val effectivePrimary = if (accentColor == AppAccentColor.CUSTOM && customColor != null) {
-        customColor
-    } else {
-        if (darkTheme) accentColor.primaryColor else accentColor.seedColor
-    }
-
-    val effectivePrimaryLight = if (accentColor == AppAccentColor.CUSTOM && customColor != null) {
-        lightenColor(customColor, 0.25f)
-    } else {
-        accentColor.primaryColorLight
-    }
-
-    val base = if (darkTheme) DarkStudioColors else LightStudioColors
-    val studioColors = remember(darkTheme, accentColor, customAccentHex) {
-        base.copy(
-            primaryIndigo = effectivePrimary,
-            primaryIndigoLight = effectivePrimaryLight,
-            accent = accentColor
-        )
-    }
+    val activePreset = themePreset ?: if (darkTheme) ThemePresets.DarkDefault else ThemePresets.LightNordic
+    val studioColors = activePreset.colors
+    val effectiveSeed = studioColors.primaryIndigo
 
     CompositionLocalProvider(LocalStudioColors provides studioColors) {
         DynamicMaterialTheme(
             seedColor = effectiveSeed,
-            useDarkTheme = darkTheme,
+            useDarkTheme = studioColors.isDark,
             style = PaletteStyle.Expressive,
             typography = AppTypography,
             content = content
